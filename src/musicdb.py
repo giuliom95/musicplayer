@@ -97,9 +97,19 @@ class MusicDB:
         c.close()
 
 
-    def db_getalbums(self):
+    def getalbums(self):
         c = self.dbconn.cursor()
+        c.execute('''
+            SELECT * FROM albums
+            ORDER BY title;
+        ''')
+        while True:
+            row = c.fetchone()
+            if row is None: break
+            yield row
+
         c.close()
+        return None
 
 
 
@@ -109,6 +119,9 @@ if __name__=='__main__':
 
     db.initnew()
     db.scandir(pathlib.Path('/home/gmartell/Music/bak'))
+
+    for i in db.getalbums():
+        print(i[1])
 
 
 
