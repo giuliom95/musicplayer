@@ -9,7 +9,8 @@ import os
 class MusicDB:
 
     def __init__(self, dbpath: pathlib.Path):
-        self.dbconn = sqlite3.connect(str(dbpath))
+        self.dbpath = dbpath
+        self.dbconn = sqlite3.connect(str(self.dbpath))
         self.init()
 
     def __del__(self):
@@ -44,18 +45,20 @@ class MusicDB:
             path     TEXT UNIQUE ON CONFLICT IGNORE
         )
         ''')
+        c.execute('''
+        CREATE TABLE IF NOT EXISTS trackqueue
+        (
+            trackid  INTEGER PRIMARY KEY REFERENCES tracks(id)
+        )
+        ''')
         self.dbconn.commit()
         c.close()
 
 
     def resetdb(self):
-        c = self.dbconn.cursor()
-        c.execute('DROP TABLE IF EXISTS artists')
-        c.execute('DROP TABLE IF EXISTS albums')
-        c.execute('DROP TABLE IF EXISTS tracks')
-        self.dbconn.commit()
-        c.close()
-        self.init()
+        self.dbconn.close()
+        self.dbpath.unlink()
+        self.__init__(self.dbpath)
 
 
     def scandir(self, path: pathlib.Path):
@@ -119,7 +122,6 @@ class MusicDB:
 
         c.close()
         return None
-
 
 
 if __name__=='__main__':
