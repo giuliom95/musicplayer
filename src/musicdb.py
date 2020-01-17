@@ -23,14 +23,12 @@ class MusicDB:
         c.execute('''
         CREATE TABLE IF NOT EXISTS artists 
         (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
             name     TEXT UNIQUE ON CONFLICT IGNORE
         )
         ''')
         c.execute('''
         CREATE TABLE IF NOT EXISTS albums
         (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
             title    TEXT UNIQUE ON CONFLICT IGNORE,
             cover    BLOB
         )
@@ -38,7 +36,6 @@ class MusicDB:
         c.execute('''
         CREATE TABLE IF NOT EXISTS tracks
         (
-            id       INTEGER PRIMARY KEY AUTOINCREMENT,
             tracknum INTEGER,
             title    TEXT,
             album    INTEGER REFERENCES albums(id),
@@ -102,7 +99,7 @@ class MusicDB:
                     album, 
                     artist, 
                     path
-                ) SELECT ?, ?, albums.id, artists.id, ? FROM albums, artists
+                ) SELECT ?, ?, albums.rowid, artists.rowid, ? FROM albums, artists
                 WHERE albums.title=? AND artists.name=?;
             ''', (tracknum, title, fname, album, artist))
         
