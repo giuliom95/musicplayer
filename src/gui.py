@@ -24,6 +24,30 @@ class AlbumWidget(qtw.QToolButton):
         self.setToolTipDuration(0)
 
 
+class AlbumList(qtw.QScrollArea):
+
+    def __init__(self, db: musicdb.MusicDB):
+        albumlist_gridlayout = qtw.QGridLayout()
+        i = 0
+        j = 0
+        img = qtg.QImage()
+        for album in db.getalbums():
+            img.loadFromData(album[2])
+            widget = AlbumWidget(album[1], img)
+            albumlist_gridlayout.addWidget(widget, j, i)
+
+            i += 1
+            if i == 3:
+                i = 0
+                j += 1
+
+        containerwidget = qtw.QWidget()
+        containerwidget.setLayout(albumlist_gridlayout)
+
+        super().__init__()
+        self.setHorizontalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
+        self.setWidget(containerwidget)
+
 
 if __name__ == "__main__":
     db = musicdb.MusicDB('./test.db')
@@ -34,27 +58,8 @@ if __name__ == "__main__":
     mainlayout = qtw.QHBoxLayout()
     mainlayout.setContentsMargins(0,0,0,0)
 
-    albumlist_gridlayout = qtw.QGridLayout()
-    i = 0
-    j = 0
-    img = qtg.QImage()
-    for album in db.getalbums():
-        img.loadFromData(album[2])
-        widget = AlbumWidget(album[1], img)
-        albumlist_gridlayout.addWidget(widget, j, i)
-        
-        i += 1
-        if i == 3:
-            i = 0
-            j += 1
-
-    albumlist_containerwidget = qtw.QWidget()
-    albumlist_containerwidget.setLayout(albumlist_gridlayout)
-    
-    albumlist_scrollarea = qtw.QScrollArea()
-    albumlist_scrollarea.setHorizontalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
-    albumlist_scrollarea.setWidget(albumlist_containerwidget)
-    mainlayout.addWidget(albumlist_scrollarea)
+    albumlist = AlbumList(db)
+    mainlayout.addWidget(albumlist)
 
     window.setLayout(mainlayout)
 
