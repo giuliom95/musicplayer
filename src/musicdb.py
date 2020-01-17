@@ -10,32 +10,31 @@ class MusicDB:
 
     def __init__(self, dbpath: pathlib.Path):
         self.dbconn = sqlite3.connect(str(dbpath))
+        self.init()
 
     def __del__(self):
         self.dbconn.close()
 
-    def initnew(self):
+
+    def init(self):
         c = self.dbconn.cursor()
-        c.execute('DROP TABLE IF EXISTS artists')
         c.execute('''
-        CREATE TABLE artists
+        CREATE TABLE IF NOT EXISTS artists 
         (
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
             name     TEXT UNIQUE ON CONFLICT IGNORE
         )
         ''')
-        c.execute('DROP TABLE IF EXISTS albums')
         c.execute('''
-        CREATE TABLE albums
+        CREATE TABLE IF NOT EXISTS albums
         (
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
             title    TEXT UNIQUE ON CONFLICT IGNORE,
             cover    BLOB
         )
         ''')
-        c.execute('DROP TABLE IF EXISTS tracks')
         c.execute('''
-        CREATE TABLE tracks
+        CREATE TABLE IF NOT EXISTS tracks
         (
             id       INTEGER PRIMARY KEY AUTOINCREMENT,
             tracknum INTEGER,
@@ -47,6 +46,16 @@ class MusicDB:
         ''')
         self.dbconn.commit()
         c.close()
+
+
+    def resetdb(self):
+        c = self.dbconn.cursor()
+        c.execute('DROP TABLE IF EXISTS artists')
+        c.execute('DROP TABLE IF EXISTS albums')
+        c.execute('DROP TABLE IF EXISTS tracks')
+        self.dbconn.commit()
+        c.close()
+        self.init()
 
 
     def scandir(self, path: pathlib.Path):
@@ -117,7 +126,7 @@ if __name__=='__main__':
     
     db = MusicDB(pathlib.Path('test.db'))
 
-    db.initnew()
+    db.resetdb()
     db.scandir(pathlib.Path('/home/gmartell/Music/bak'))
 
     for i in db.getalbums():
