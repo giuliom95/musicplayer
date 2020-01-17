@@ -3,6 +3,7 @@
 import sqlite3
 import pathlib
 import mutagen.id3
+import random
 
 import os
 
@@ -46,9 +47,9 @@ class MusicDB:
         )
         ''')
         c.execute('''
-        CREATE TABLE IF NOT EXISTS trackqueue
+        CREATE TABLE IF NOT EXISTS playqueue
         (
-            trackid  INTEGER PRIMARY KEY REFERENCES tracks(id)
+            trackid  INTEGER UNIQUE REFERENCES tracks(id)
         )
         ''')
         self.dbconn.commit()
@@ -124,6 +125,35 @@ class MusicDB:
         return None
 
 
+    def gettracksnum(self):
+        c = self.dbconn.cursor()
+        c.execute('''
+            SELECT COUNT(rowid) FROM tracks
+        ''')
+        tracksnum = c.fetchone()[0]
+        c.close()
+        return tracksnum
+
+
+    def shuffleall(self):
+        c = self.dbconn.cursor()
+
+        # Truncate playqueue
+        c.execute('''
+            DELETE FROM playqueue
+        ''')
+
+        tracksnum = self.gettracksnum()
+
+        l = list(range(tracksnum))
+        random.shuffle(l)
+        l = [(i,) for i in l]
+        
+        c.executemany('INSERT INTO playqueue VALUES(?)', l)
+        self.dbconn.commit()
+        c.close()
+
+
 if __name__=='__main__':
     
     db = MusicDB(pathlib.Path('test.db'))
@@ -131,8 +161,10 @@ if __name__=='__main__':
     db.resetdb()
     db.scandir(pathlib.Path('/home/gmartell/Music/bak'))
 
-    for i in db.getalbums():
-        print(i[1])
+    #for i in db.getalbums():
+    #    print(i[1])
+
+    db.shuffleall()
 
 
 
