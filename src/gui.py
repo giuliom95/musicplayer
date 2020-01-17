@@ -16,14 +16,12 @@ class AlbumWidget(qtw.QToolButton):
 
         cover = cover.scaledToHeight(300, qtc.Qt.TransformationMode.SmoothTransformation)
         cover = cover.copy(self._rect)
-        if len(title) > 30:
-            title = title[:35] + '...'
         icon = qtg.QIcon(qtg.QPixmap.fromImage(cover))
-        self.setToolButtonStyle(qtc.Qt.ToolButtonTextUnderIcon)
+        self.setToolButtonStyle(qtc.Qt.ToolButtonIconOnly)
         self.setIcon(icon)
         self.setIconSize(qtc.QSize(300, 300))
-        self.setText(title)
-        
+        self.setToolTip(title)
+        self.setToolTipDuration(0)
 
 
 
@@ -34,6 +32,7 @@ if __name__ == "__main__":
     
     window = qtw.QWidget()
     mainlayout = qtw.QHBoxLayout()
+    mainlayout.setContentsMargins(0,0,0,0)
 
     albumlist_gridlayout = qtw.QGridLayout()
     i = 0
@@ -53,6 +52,7 @@ if __name__ == "__main__":
     albumlist_containerwidget.setLayout(albumlist_gridlayout)
     
     albumlist_scrollarea = qtw.QScrollArea()
+    albumlist_scrollarea.setHorizontalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
     albumlist_scrollarea.setWidget(albumlist_containerwidget)
     mainlayout.addWidget(albumlist_scrollarea)
 
