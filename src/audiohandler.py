@@ -7,15 +7,13 @@ import pathlib
 import os
 import threading
 
-import musicdb
-
 class AudioHandler():
 
     def __init__(self):
         self._waveobj = None
         self._playobj = None
         self._thread = None
-        self._bufferfilepath = str(pathlib.Path('./buffer.wav'))
+        self._bufferfilepath = pathlib.Path('./buffer.wav')
 
     def playtrack(self, path: pathlib.Path):
         subprocess.Popen([
@@ -37,7 +35,7 @@ class AudioHandler():
                 # Check if ffmpeg has written something to disk yet
                 bufferinfo = os.stat(self._bufferfilepath)
                 if bufferinfo.st_size > 0:
-                    self._waveobj = sa.WaveObject.from_wave_file(self._bufferfilepath)
+                    self._waveobj = sa.WaveObject.from_wave_file(str(self._bufferfilepath))
                     self._playobj = self._waveobj.play()
                     break
             except Exception as e:

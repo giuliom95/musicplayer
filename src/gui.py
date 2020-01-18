@@ -7,6 +7,22 @@ import PySide2.QtCore as qtc
 import PySide2.Qt as qt
 
 import musicdb
+import audiohandler
+
+class MusicPlayer():
+
+    def __init__(self):
+        self._db = musicdb.MusicDB('./test.db')
+        self._ah = audiohandler.AudioHandler()
+        self.playing = False
+
+    def play(self):
+        print('PLAY')
+        self.playing = True
+
+    def pause(self):
+        print('PAUSE')
+        self.playing = False
 
 class AlbumWidget(qtw.QToolButton):
     _rect = qtc.QRect(0, 0, 300, 300)
@@ -49,20 +65,48 @@ class AlbumList(qtw.QScrollArea):
         self.setWidget(containerwidget)
 
 
-if __name__ == "__main__":
-    db = musicdb.MusicDB('./test.db')
+class MainWindow(qtw.QWidget):
 
-    app = qtw.QApplication(sys.argv)
+    def __init__(self, musicplayer: MusicPlayer):
+        self._mp = musicplayer
+        super().__init__()
+
+        mainlayout = qtw.QVBoxLayout()
+
+        prevbtn = qtw.QPushButton('Prev')
+        self._playpausebtn = qtw.QPushButton('Play')
+        nextbtn = qtw.QPushButton('Next')
+
+        infolabel = qtw.QLabel('Title\nArtist\nAlbum')
+
+        layout = qtw.QHBoxLayout()
+        layout.addWidget(prevbtn)
+        layout.addWidget(self._playpausebtn)
+        layout.addWidget(nextbtn)
+        layout.addWidget(infolabel)
+        layout.addStretch()
+
+        mainlayout.addLayout(layout)
+
+        self.setLayout(mainlayout)
+        self.connect(self._playpausebtn, qtc.SIGNAL('clicked()'), self.playpausePressed)
+
+    def playpausePressed(self):
+        if self._mp.playing:
+            self._mp.pause()
+            self._playpausebtn.setText('Play')
+        else:
+            self._mp.play()
+            self._playpausebtn.setText('Pause')
+
     
-    window = qtw.QWidget()
-    mainlayout = qtw.QHBoxLayout()
-    mainlayout.setContentsMargins(0,0,0,0)
 
-    albumlist = AlbumList(db)
-    mainlayout.addWidget(albumlist)
 
-    window.setLayout(mainlayout)
 
+if __name__ == "__main__":
+    app = qtw.QApplication(sys.argv)
+    musicplayer = MusicPlayer()
+    window = MainWindow(musicplayer)
     window.show()
 
     sys.exit(app.exec_())
