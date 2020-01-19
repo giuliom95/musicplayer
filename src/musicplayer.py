@@ -17,7 +17,7 @@ import musicdb
 import gui
 
 CHUNK = 1024
-SILENCE = b'0'*4
+SILENCE = b'\x7F\xFF'*2*CHUNK
 
 class BufferStatus(enum.Enum):
     EMPTY       = enum.auto()
@@ -45,6 +45,7 @@ class Cache():
             Buffer(pathlib.Path('./buf0.wav')),
             Buffer(pathlib.Path('./buf1.wav'))
         ]
+        self.wave = None
 
     def __del__(self):
         for b in self._bufs:
@@ -90,6 +91,7 @@ class Cache():
                 if b.fillingprocess.poll() is not None:
                     b.wave = wave.open(str(b.path), 'rb')
                     b.status = BufferStatus.READY
+                    self.wave = b.wave
                     print(f'[INFO] Buffer {b.path.name} ready')
 
 
@@ -110,6 +112,8 @@ class MusicPlayer():
 
         self.curtrack = self._db.getnexttrack()
 
+        self.playing = False
+
         self._cache = Cache()
         self._cache.cachetrack(self.curtrack['path'])
         
@@ -119,6 +123,7 @@ class MusicPlayer():
             self.curtrack['artist'],
             self.curtrack['album']
         )
+        self._gui.setPaused()
         self._gui.show()
 
         self._thread = threading.Thread(target=self._mainloop)
@@ -132,12 +137,24 @@ class MusicPlayer():
     def _mainloop(self):
         while True:
             self._cache.upkeep()
-            time.sleep(.1)
 
+            # Exit if GUI is closed
             if not self._gui.isVisible():
                 break
 
-            self._audiostream.write(SILENCE)
+            if self.playing is False or self._cache.wave is None:
+                self._audiostream.write(SILENCE)
+            else:
+                data = self._cache.wave.readframes(CHUNK)
+                self._audiostream.write(data)
+
+    def playpause(self):
+        if self.playing:
+            self._gui.setPaused()
+            self.playing = False
+        else:
+            self._gui.setPlaying()
+            self.playing = True
 
 
 if __name__ == "__main__":

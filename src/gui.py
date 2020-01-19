@@ -79,14 +79,14 @@ class MainWindow(qtw.QWidget):
         self.setLayout(mainlayout)
         self.connect(self._playpausebtn, qtc.SIGNAL('clicked()'), self.playpausePressed)
 
-
     def playpausePressed(self):
-        if self._mp.playing:
-            self._mp.pause()
-            self._playpausebtn.setText('Play')
-        else:
-            self._mp.play()
-            self._playpausebtn.setText('Pause')
+        self._mp.playpause()
+
+    def setPaused(self):
+        self._playpausebtn.setText('Play')
+
+    def setPlaying(self):
+        self._playpausebtn.setText('Pause')
 
     def setTrackInfo(self, title: str, artist: str, album: str):
         self._infolabel.setText(f'{title}\n{artist}\n{album}')
