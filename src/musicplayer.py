@@ -16,6 +16,9 @@ import sys
 import musicdb
 import gui
 
+CHUNK = 1024
+SILENCE = b'0'*4
+
 class BufferStatus(enum.Enum):
     EMPTY       = enum.auto()
     FILLING     = enum.auto()
@@ -28,6 +31,8 @@ class Buffer():
     def __init__(self, path: pathlib.Path):
         self.path = path
         self.status = BufferStatus.EMPTY
+        self.fillingprocess = None
+        self.wave = None
 
     def isReadyToBeFilled(self):
         return  self.status == BufferStatus.EMPTY or \
@@ -40,7 +45,13 @@ class Cache():
             Buffer(pathlib.Path('./buf0.wav')),
             Buffer(pathlib.Path('./buf1.wav'))
         ]
-        self._processes = [None, None]
+
+    def __del__(self):
+        for b in self._bufs:
+            try:
+                b.path.unlink()
+            except FileNotFoundError:
+                pass
 
     def cachetrack(self, trackpath: pathlib.Path, slot=None):
         if slot is None:
@@ -58,10 +69,11 @@ class Cache():
         except FileNotFoundError:
             pass
 
-        self._processes[slot] = subprocess.Popen([
+        b.fillingprocess = subprocess.Popen([
             'ffmpeg',
             '-i', trackpath,
             '-f', 'wav',
+            '-ar', '44100',
             '-c:a', 'pcm_s16le', 
             '-y', b.path
         ],
@@ -70,7 +82,15 @@ class Cache():
 
         b.status = BufferStatus.FILLING
 
-        print(f'[INFO] Started chaching {trackpath} on slot #{slot}')
+        print(f'[INFO] Started chaching "{trackpath}" on buffer {b.path.name}')
+
+    def upkeep(self):
+        for b in self._bufs:
+            if b.status == BufferStatus.FILLING:
+                if b.fillingprocess.poll() is not None:
+                    b.wave = wave.open(str(b.path), 'rb')
+                    b.status = BufferStatus.READY
+                    print(f'[INFO] Buffer {b.path.name} ready')
 
 
 class MusicPlayer():
@@ -78,18 +98,20 @@ class MusicPlayer():
     def __init__(self):
 
         self._pyaudio = pyaudio.PyAudio()
-
-        self._cache = Cache()
-
-        self._thread = threading.Thread(target=self._mainloop)
-        self._thread.start()
+        self._audiostream = self._pyaudio.open(
+            format=pyaudio.paInt16,
+            channels=2,
+            rate=44100,
+            output=True
+        )
 
         dbpath = pathlib.Path('./music.db')
         self._db = musicdb.MusicDB(dbpath)
 
         self.curtrack = self._db.getnexttrack()
-        self._cache.cachetrack(self.curtrack['path'])
 
+        self._cache = Cache()
+        self._cache.cachetrack(self.curtrack['path'])
         
         self._gui = gui.MainWindow(self)
         self._gui.setTrackInfo(
@@ -99,43 +121,23 @@ class MusicPlayer():
         )
         self._gui.show()
 
+        self._thread = threading.Thread(target=self._mainloop)
+        self._thread.start()
 
     def __del__(self):
-        #self._audiostream.stop_stream()
-        #self._audiostream.close()
+        self._audiostream.stop_stream()
+        self._audiostream.close()
         self._pyaudio.terminate()
-
-
-    '''
-    def _looping(self):
-        while True:
-            try:
-                audiofileinfo = os.stat(self._wavfilepath)
-                if audiofileinfo.st_size > 0:
-                    break
-            except Exception as e:
-                if not isinstance(e, FileNotFoundError):
-                    raise
-        
-        CHUNK = 1024
-        wf = wave.open(str(self._wavfilepath), 'rb')
-        self._audiostream = self._pyaudio.open(
-            format=pyaudio.paInt16,
-            channels=2,
-            rate=wf.getframerate(),
-            output=True
-        )
-
-        data = wf.readframes(CHUNK)
-        # play stream (3)
-        while len(data) > 0:
-            self._audiostream.write(data)
-            data = wf.readframes(CHUNK)
-    '''
 
     def _mainloop(self):
         while True:
-            break
+            self._cache.upkeep()
+            time.sleep(.1)
+
+            if not self._gui.isVisible():
+                break
+
+            self._audiostream.write(SILENCE)
 
 
 if __name__ == "__main__":
