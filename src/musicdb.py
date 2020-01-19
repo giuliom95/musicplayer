@@ -46,7 +46,7 @@ class MusicDB:
         c.execute('''
         CREATE TABLE IF NOT EXISTS playqueue
         (
-            trackid  INTEGER UNIQUE REFERENCES tracks(id)
+            track  INTEGER UNIQUE REFERENCES tracks(id)
         )
         ''')
         self.dbconn.commit()
@@ -150,10 +150,33 @@ class MusicDB:
         self.dbconn.commit()
         c.close()
 
+    def getnexttrack(self):
+        c = self.dbconn.cursor()
+        c.execute('''
+            SELECT tracks.title, artists.name, albums.title, albums.cover, tracks.path
+            FROM playqueue, tracks, albums, artists
+            WHERE   playqueue.rowid=1               AND
+                    tracks.rowid=playqueue.track    AND
+                    artists.rowid=tracks.artist     AND
+                    albums.rowid=tracks.album
+        ''')
+        values = c.fetchone()
+        c.close()
+        keys = [
+            'title',
+            'artist',
+            'album',
+            'albumcover',
+            'path'
+        ]
+        track = dict(zip(keys, values))
+        track['path'] = pathlib.Path(track['path'])
+        return track
+
 
 if __name__=='__main__':
     
-    db = MusicDB(pathlib.Path('test.db'))
+    db = MusicDB(pathlib.Path('./music.db'))
 
     db.resetdb()
     db.scandir(pathlib.Path('/home/gmartell/Music/bak'))
@@ -162,6 +185,7 @@ if __name__=='__main__':
     #    print(i[1])
 
     db.shuffleall()
+    db.getnexttrack()
 
 
 
