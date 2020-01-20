@@ -17,6 +17,8 @@ import musicdb
 import gui
 
 CHUNK = 1024
+
+# pyaudio wants unsigned 16bit so silence is not 0 but 7FFF
 SILENCE = b'\x7F\xFF'*2*CHUNK
 
 class BufferStatus(enum.Enum):
@@ -24,28 +26,29 @@ class BufferStatus(enum.Enum):
     FILLING     = enum.auto()
     READY       = enum.auto()
     BEING_READ  = enum.auto()
-    EXHAUSTED   = enum.auto() 
+    EXPIRED     = enum.auto() 
 
 
 class Buffer():
-    def __init__(self, path: pathlib.Path):
-        self.path = path
+    def __init__(self, id: int):
+        self.path = pathlib.Path(f'./buf{id}.wav')
         self.status = BufferStatus.EMPTY
         self.fillingprocess = None
         self.wave = None
+        self.id = id
 
     def isReadyToBeFilled(self):
         return  self.status == BufferStatus.EMPTY or \
-                self.status == BufferStatus.EXHAUSTED
+                self.status == BufferStatus.EXPIRED
 
 
 class Cache():
     def __init__(self):
         self._bufs = [
-            Buffer(pathlib.Path('./buf0.wav')),
-            Buffer(pathlib.Path('./buf1.wav'))
+            Buffer(0),
+            Buffer(1)
         ]
-        self.wave = None
+        self.curbuf = self._bufs[0]
 
     def __del__(self):
         for b in self._bufs:
@@ -61,7 +64,7 @@ class Cache():
             if not b.isReadyToBeFilled():
                 slot = 1
                 b = self._bufs[slot]
-                if b.isReadyToBeFilled():
+                if not b.isReadyToBeFilled():
                     raise Exception('No free buffer')
         b = self._bufs[slot]
 
@@ -83,7 +86,7 @@ class Cache():
 
         b.status = BufferStatus.FILLING
 
-        print(f'[INFO] Started chaching "{trackpath}" on buffer {b.path.name}')
+        print(f'[INFO] Started caching "{trackpath}" on buffer #{b.id}')
 
     def upkeep(self):
         for b in self._bufs:
@@ -91,8 +94,15 @@ class Cache():
                 if b.fillingprocess.poll() is not None:
                     b.wave = wave.open(str(b.path), 'rb')
                     b.status = BufferStatus.READY
-                    self.wave = b.wave
-                    print(f'[INFO] Buffer {b.path.name} ready')
+                    print(f'[INFO] Buffer #{b.id} ready')
+
+    def swap(self):
+        self.curbuf.status = BufferStatus.EXPIRED
+        oldbufid = self.curbuf.id
+        newbufid = (oldbufid + 1) % 2
+        self.curbuf = self._bufs[newbufid]
+        print(f'[INFO] Swapped from buffer #{oldbufid} to #{newbufid}')
+
 
 
 class MusicPlayer():
@@ -107,25 +117,25 @@ class MusicPlayer():
             output=True
         )
 
-        dbpath = pathlib.Path('./music.db')
-        self._db = musicdb.MusicDB(dbpath)
+        self._dbpath = pathlib.Path('./music.db')
+        self._db = musicdb.MusicDB(self._dbpath)
 
-        self.curtrack = self._db.getnexttrack()
+        self.curtrack = self._db.getcurrenttrack()
+        self.nexttrack = self._db.getnexttrack()
+        self._nextrequested = False
 
         self.playing = False
 
         self._cache = Cache()
         self._cache.cachetrack(self.curtrack['path'])
+        self._cache.cachetrack(self.nexttrack['path'])
         
         self._gui = gui.MainWindow(self)
-        self._gui.setTrackInfo(
-            self.curtrack['title'],
-            self.curtrack['artist'],
-            self.curtrack['album']
-        )
+        self.setGuiTrackInfo(self.curtrack)
         self._gui.setPaused()
         self._gui.show()
 
+        self._db = None
         self._thread = threading.Thread(target=self._mainloop)
         self._thread.start()
 
@@ -135,6 +145,7 @@ class MusicPlayer():
         self._pyaudio.terminate()
 
     def _mainloop(self):
+        self._db = musicdb.MusicDB(self._dbpath)
         while True:
             self._cache.upkeep()
 
@@ -142,11 +153,19 @@ class MusicPlayer():
             if not self._gui.isVisible():
                 break
 
-            if self.playing is False or self._cache.wave is None:
+            if self.playing is False or self._cache.curbuf.wave is None:
                 self._audiostream.write(SILENCE)
             else:
-                data = self._cache.wave.readframes(CHUNK)
-                self._audiostream.write(data)
+                data = self._cache.curbuf.wave.readframes(CHUNK)
+                if len(data) > 0:
+                    self._audiostream.write(data)
+                else:
+                    self.requestnext()
+
+            if self._nextrequested:
+                self.next()
+                self._nextrequested = False
+        
 
     def playpause(self):
         if self.playing:
@@ -155,6 +174,24 @@ class MusicPlayer():
         else:
             self._gui.setPlaying()
             self.playing = True
+
+    def next(self):
+        self.curtrack = self.nexttrack
+        self._db.nexttrack()
+        self.nexttrack = self._db.getnexttrack()
+        self.setGuiTrackInfo(self.curtrack)
+        self._cache.swap()
+        self._cache.cachetrack(self.nexttrack['path'])
+
+    def requestnext(self):
+        self._nextrequested = True
+
+    def setGuiTrackInfo(self, trackinfo):
+        self._gui.setTrackInfo(
+            trackinfo['title'],
+            trackinfo['artist'],
+            trackinfo['album']
+        )
 
 
 if __name__ == "__main__":

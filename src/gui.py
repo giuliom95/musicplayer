@@ -78,6 +78,7 @@ class MainWindow(qtw.QWidget):
 
         self.setLayout(mainlayout)
         self.connect(self._playpausebtn, qtc.SIGNAL('clicked()'), self.playpausePressed)
+        self.connect(nextbtn, qtc.SIGNAL('clicked()'), self.nextPressed)
 
     def playpausePressed(self):
         self._mp.playpause()
@@ -87,6 +88,9 @@ class MainWindow(qtw.QWidget):
 
     def setPlaying(self):
         self._playpausebtn.setText('Pause')
+
+    def nextPressed(self):
+        self._mp.requestnext()
 
     def setTrackInfo(self, title: str, artist: str, album: str):
         self._infolabel.setText(f'{title}\n{artist}\n{album}')
