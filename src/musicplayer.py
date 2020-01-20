@@ -135,6 +135,7 @@ class MusicPlayer():
         self._gui.setPaused()
         self._gui.show()
 
+        # DB will be reopened in the playing thread
         self._db = None
         self._thread = threading.Thread(target=self._mainloop)
         self._thread.start()
@@ -151,9 +152,13 @@ class MusicPlayer():
 
             # Exit if GUI is closed
             if not self._gui.isVisible():
+                self._db = None
                 break
 
-            if self.playing is False or self._cache.curbuf.wave is None:
+            if (self.playing is False or
+                self._cache.curbuf.wave is None or
+                self._cache.curbuf.status != BufferStatus.READY):
+
                 self._audiostream.write(SILENCE)
             else:
                 data = self._cache.curbuf.wave.readframes(CHUNK)
