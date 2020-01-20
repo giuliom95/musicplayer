@@ -79,6 +79,7 @@ class MainWindow(qtw.QWidget):
         self.setLayout(mainlayout)
         self.connect(self._playpausebtn, qtc.SIGNAL('clicked()'), self.playpausePressed)
         self.connect(nextbtn, qtc.SIGNAL('clicked()'), self.nextPressed)
+        self.connect(prevbtn, qtc.SIGNAL('clicked()'), self.prevPressed)
 
     def playpausePressed(self):
         self._mp.playpause()
@@ -91,6 +92,9 @@ class MainWindow(qtw.QWidget):
 
     def nextPressed(self):
         self._mp.requestnext()
+
+    def prevPressed(self):
+        self._mp.requestprev()
 
     def setTrackInfo(self, title: str, artist: str, album: str):
         self._infolabel.setText(f'{title}\n{artist}\n{album}')

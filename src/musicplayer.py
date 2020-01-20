@@ -103,7 +103,9 @@ class Cache():
         self.curbuf = self._bufs[newbufid]
         print(f'[INFO] Swapped from buffer #{oldbufid} to #{newbufid}')
 
-
+    def expireBoth(self):
+        for b in self._bufs:
+            b.status = BufferStatus.EXPIRED
 
 class MusicPlayer():
 
@@ -123,6 +125,7 @@ class MusicPlayer():
         self.curtrack = self._db.getcurrenttrack()
         self.nexttrack = self._db.getnexttrack()
         self._nextrequested = False
+        self._prevrequested = False
 
         self.playing = False
 
@@ -168,8 +171,12 @@ class MusicPlayer():
                     self.requestnext()
 
             if self._nextrequested:
-                self.next()
+                self._next()
                 self._nextrequested = False
+
+            if self._prevrequested:
+                self._prev()
+                self._prevrequested = False
         
 
     def playpause(self):
@@ -180,7 +187,7 @@ class MusicPlayer():
             self._gui.setPlaying()
             self.playing = True
 
-    def next(self):
+    def _next(self):
         self.curtrack = self.nexttrack
         self._db.nexttrack()
         self.nexttrack = self._db.getnexttrack()
@@ -190,6 +197,20 @@ class MusicPlayer():
 
     def requestnext(self):
         self._nextrequested = True
+
+    def _prev(self):
+        self._cache.expireBoth()
+        self._db.prevtrack()
+        self.curtrack = self._db.getcurrenttrack()
+        self.nexttrack = self._db.getnexttrack()
+        self.setGuiTrackInfo(self.curtrack)
+        self._cache.curbuf.status = BufferStatus.EXPIRED
+        self._cache.cachetrack(self.curtrack['path'])
+        self._cache.cachetrack(self.nexttrack['path'])
+
+    def requestprev(self):
+        self._prevrequested = True
+
 
     def setGuiTrackInfo(self, trackinfo):
         self._gui.setTrackInfo(

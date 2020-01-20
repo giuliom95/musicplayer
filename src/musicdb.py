@@ -238,6 +238,20 @@ class MusicDB:
         self.dbconn.commit()
         c.close()
 
+    def prevtrack(self, playqueue=None):
+        c = self.dbconn.cursor()
+
+        if playqueue is None: playqueue = self.SHUFFLEALLNAME
+
+        c.execute('''
+            UPDATE playqueues
+            SET currenttrack=currenttrack-1
+            WHERE name=?
+        ''', (playqueue,))
+
+        self.dbconn.commit()
+        c.close()
+
 
 if __name__=='__main__':
     
