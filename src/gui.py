@@ -58,25 +58,63 @@ class MainWindow(qtw.QWidget):
         
         self._mp = musicplayer
         super().__init__()
-
         mainlayout = qtw.QVBoxLayout()
 
-        prevbtn = qtw.QPushButton('Prev')
-        self._playpausebtn = qtw.QPushButton('Play')
-        nextbtn = qtw.QPushButton('Next')
+        iconsize = qtc.QSize(32, 32)
+        icon = qtg.QIcon('./icons/prev.svg')
+        prevbtn = qtw.QToolButton()
+        prevbtn.setToolButtonStyle(qtc.Qt.ToolButtonIconOnly)
+        prevbtn.setIcon(icon)
+        prevbtn.setIconSize(iconsize)
 
-        self._infolabel = qtw.QLabel('\n\n')
+        icon = qtg.QIcon('./icons/next.svg')
+        nextbtn = qtw.QToolButton()
+        nextbtn.setToolButtonStyle(qtc.Qt.ToolButtonIconOnly)
+        nextbtn.setIcon(icon)
+        nextbtn.setIconSize(iconsize)
 
-        layout = qtw.QHBoxLayout()
-        layout.addWidget(prevbtn)
-        layout.addWidget(self._playpausebtn)
-        layout.addWidget(nextbtn)
-        layout.addWidget(self._infolabel)
-        layout.addStretch()
+        self._playicon = qtg.QIcon('./icons/play.svg')
+        self._pauseicon = qtg.QIcon('./icons/pause.svg')
+        self._playpausebtn = qtw.QToolButton()
+        self._playpausebtn.setToolButtonStyle(qtc.Qt.ToolButtonIconOnly)
+        self._playpausebtn.setIcon(self._playicon)
+        self._playpausebtn.setIconSize(iconsize)
 
-        mainlayout.addLayout(layout)
+        self._albumcoverlabel = qtw.QLabel("Album cover here")
+
+        controlslayout = qtw.QHBoxLayout()
+        controlslayout.addStretch()
+        controlslayout.addWidget(prevbtn)
+        controlslayout.addWidget(self._playpausebtn)
+        controlslayout.addWidget(nextbtn)
+        controlslayout.addStretch()
+
+        self._titlelabel = qtw.QLabel()
+        self._artistlabel = qtw.QLabel()
+        self._albumlabel = qtw.QLabel()
+        self._titlelabel.setAlignment(qtc.Qt.AlignCenter)
+        self._artistlabel.setAlignment(qtc.Qt.AlignCenter)
+        self._albumlabel.setAlignment(qtc.Qt.AlignCenter)
+
+        infoboxlayout = qtw.QVBoxLayout()
+        infoboxlayout.addWidget(self._titlelabel)
+        infoboxlayout.addWidget(self._artistlabel)
+        infoboxlayout.addWidget(self._albumlabel)
+
+        bottombarlayout = qtw.QVBoxLayout()
+        bottombarlayout.addLayout(controlslayout)
+        bottombarlayout.addLayout(infoboxlayout)
+
+        mainlayout.addWidget(self._albumcoverlabel)
+        mainlayout.addLayout(bottombarlayout)
 
         self.setLayout(mainlayout)
+
+        bottombarlayout.setContentsMargins(5,0,5,5)
+        infoboxlayout.setMargin(0)
+        infoboxlayout.setSpacing(0)
+        mainlayout.setMargin(0)
+
         self.connect(self._playpausebtn, qtc.SIGNAL('clicked()'), self.playpausePressed)
         self.connect(nextbtn, qtc.SIGNAL('clicked()'), self.nextPressed)
         self.connect(prevbtn, qtc.SIGNAL('clicked()'), self.prevPressed)
@@ -85,10 +123,10 @@ class MainWindow(qtw.QWidget):
         self._mp.playpause()
 
     def setPaused(self):
-        self._playpausebtn.setText('Play')
+        self._playpausebtn.setIcon(self._playicon)
 
     def setPlaying(self):
-        self._playpausebtn.setText('Pause')
+        self._playpausebtn.setIcon(self._pauseicon)
 
     def nextPressed(self):
         self._mp.requestnext()
@@ -96,5 +134,14 @@ class MainWindow(qtw.QWidget):
     def prevPressed(self):
         self._mp.requestprev()
 
-    def setTrackInfo(self, title: str, artist: str, album: str):
-        self._infolabel.setText(f'{title}\n{artist}\n{album}')
+    def setTrackInfo(self, trackinfo):
+        self.setFixedSize(self.sizeHint())
+        self._titlelabel.setText(f'<b>{trackinfo["title"]}</b>')
+        self._artistlabel.setText(trackinfo['artist'])
+        self._albumlabel.setText(trackinfo['album'])
+
+        img = qtg.QImage()
+        img.loadFromData(trackinfo['albumcover'])
+        img = img.scaledToHeight(300, qtc.Qt.TransformationMode.SmoothTransformation)
+        img = img.copy(qtc.QRect(0, 0, 300, 300))
+        self._albumcoverlabel.setPixmap(qtg.QPixmap.fromImage(img))

@@ -134,9 +134,9 @@ class MusicPlayer():
         self._cache.cachetrack(self.nexttrack['path'])
         
         self._gui = gui.MainWindow(self)
-        self.setGuiTrackInfo(self.curtrack)
-        self._gui.setPaused()
         self._gui.show()
+        self._gui.setPaused()
+        self._gui.setTrackInfo(self.curtrack)
 
         # DB will be reopened in the playing thread
         self._db = None
@@ -191,7 +191,7 @@ class MusicPlayer():
         self.curtrack = self.nexttrack
         self._db.nexttrack()
         self.nexttrack = self._db.getnexttrack()
-        self.setGuiTrackInfo(self.curtrack)
+        self._gui.setTrackInfo(self.curtrack)
         self._cache.swap()
         self._cache.cachetrack(self.nexttrack['path'])
 
@@ -203,25 +203,30 @@ class MusicPlayer():
         self._db.prevtrack()
         self.curtrack = self._db.getcurrenttrack()
         self.nexttrack = self._db.getnexttrack()
-        self.setGuiTrackInfo(self.curtrack)
-        self._cache.curbuf.status = BufferStatus.EXPIRED
-        self._cache.cachetrack(self.curtrack['path'])
+        self._gui.setTrackInfo(self.curtrack)
+        self._cache.cachetrack(
+            self.curtrack['path'], 
+            slot=self._cache.curbuf.id
+        )
         self._cache.cachetrack(self.nexttrack['path'])
 
     def requestprev(self):
         self._prevrequested = True
 
 
-    def setGuiTrackInfo(self, trackinfo):
-        self._gui.setTrackInfo(
-            trackinfo['title'],
-            trackinfo['artist'],
-            trackinfo['album']
-        )
-
 
 if __name__ == "__main__":
 
     app = PySide2.QtWidgets.QApplication(sys.argv)
+    app.setStyleSheet('''
+        QWidget {
+            background-color: #20201D;
+            color: white;
+        }
+        QToolButton {
+            border: 1px solid DimGray;
+            border-radius: 4px;
+        }
+    ''')
     MusicPlayer()
     sys.exit(app.exec_())
