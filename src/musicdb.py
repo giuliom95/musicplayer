@@ -201,19 +201,19 @@ class MusicDB:
         c = self.dbconn.cursor()
 
         c.execute('''
-            SELECT tracks.title, artists.name, albums.title, albums.cover, tracks.path
-            FROM playqueues, playqueues2tracks, tracks, albums, artists
-            WHERE   playqueues.name=?                                    AND
-                    playqueues2tracks.position=playqueues.currenttrack+? AND
-                    playqueues2tracks.playqueue=playqueues.rowid         AND
-                    tracks.rowid=playqueues2tracks.track                 AND
-                    artists.rowid=tracks.artist                          AND
-                    albums.rowid=tracks.album
+            SELECT p2t.position, t.title, art.name, alb.title, alb.cover, t.path
+            FROM playqueues AS p, playqueues2tracks AS p2t, tracks AS t, albums AS alb, artists AS art
+            WHERE   p.name=?                      AND
+                    p2t.position=p.currenttrack+? AND
+                    p2t.playqueue=p.rowid         AND
+                    t.rowid=p2t.track             AND
+                    art.rowid=t.artist            AND
+                    alb.rowid=t.album
         ''', (playqueue, offset))
 
         values = c.fetchone()
-        c.close()
         keys = [
+            'tracknum',
             'title',
             'artist',
             'album',
@@ -222,6 +222,16 @@ class MusicDB:
         ]
         track = dict(zip(keys, values))
         track['path'] = pathlib.Path(track['path'])
+
+        c.execute('''
+            SELECT COUNT(*)
+            FROM playqueues AS p, playqueues2tracks AS p2t
+            WHERE   p.name=?                      AND
+                    p2t.playqueue=p.rowid
+        ''', (playqueue,))
+        track['playqueuelen'] = c.fetchone()[0]
+                
+        c.close()
         return track
 
     def nexttrack(self, playqueue=None):

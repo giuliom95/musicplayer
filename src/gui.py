@@ -64,6 +64,8 @@ class MainWindow(qtw.QWidget):
         super().__init__()
         mainlayout = qtw.QVBoxLayout()
 
+        self._tracknumlabel = qtw.QLabel('x of x')
+
         iconsize = qtc.QSize(32, 32)
         icon = qtg.QIcon('./icons/prev.svg')
         prevbtn = qtw.QToolButton()
@@ -87,6 +89,8 @@ class MainWindow(qtw.QWidget):
         self._albumcoverlabel = qtw.QLabel("Album cover here")
 
         controlslayout = qtw.QHBoxLayout()
+        controlslayout.addStretch()
+        controlslayout.addWidget(self._tracknumlabel)
         controlslayout.addStretch()
         controlslayout.addWidget(prevbtn)
         controlslayout.addWidget(self._playpausebtn)
@@ -140,12 +144,17 @@ class MainWindow(qtw.QWidget):
 
     def setTrackInfo(self, trackinfo):
         self.setFixedSize(self.sizeHint())
+
         title = cropText(trackinfo['title'])
         artist = cropText(trackinfo['artist'])
         album = cropText(trackinfo['album'])
         self._titlelabel.setText(f'<b>{title}</b>')
         self._artistlabel.setText(artist)
         self._albumlabel.setText(album)
+
+        tn = trackinfo['tracknum']
+        pql = trackinfo['playqueuelen']
+        self._tracknumlabel.setText(f'{tn} of {pql}')
 
         img = qtg.QImage()
         img.loadFromData(trackinfo['albumcover'])
