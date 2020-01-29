@@ -220,7 +220,7 @@ if __name__ == "__main__":
     app = PySide2.QtWidgets.QApplication(sys.argv)
     app.setStyleSheet('''
         QWidget {
-            background-color: #20201D;
+            background-color: black;
             color: white;
         }
         QToolButton {

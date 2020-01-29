@@ -10,6 +10,10 @@ import PySide2.Qt as qt
 
 import sys
 
+def cropText(text, chars=35):
+    if len(text) >= chars:
+        return text[:chars].rstrip() + '...'
+    return text
 
 class AlbumWidget(qtw.QToolButton):
     _rect = qtc.QRect(0, 0, 300, 300)
@@ -136,9 +140,12 @@ class MainWindow(qtw.QWidget):
 
     def setTrackInfo(self, trackinfo):
         self.setFixedSize(self.sizeHint())
-        self._titlelabel.setText(f'<b>{trackinfo["title"]}</b>')
-        self._artistlabel.setText(trackinfo['artist'])
-        self._albumlabel.setText(trackinfo['album'])
+        title = cropText(trackinfo['title'])
+        artist = cropText(trackinfo['artist'])
+        album = cropText(trackinfo['album'])
+        self._titlelabel.setText(f'<b>{title}</b>')
+        self._artistlabel.setText(artist)
+        self._albumlabel.setText(album)
 
         img = qtg.QImage()
         img.loadFromData(trackinfo['albumcover'])
